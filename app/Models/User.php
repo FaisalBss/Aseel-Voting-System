@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -50,4 +52,14 @@ class User extends Authenticatable
         'role' => 'boolean',
         'otp_expires_at' => 'datetime',
     ];
+
+    public function votes(): HasMany
+    {
+        return $this->hasMany(UserVote::class);
+    }
+
+    public function pollsCreated(): HasMany
+    {
+        return $this->hasMany(Poll::class, 'created_by');
+    }
 }

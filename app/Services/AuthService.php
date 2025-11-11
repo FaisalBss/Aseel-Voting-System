@@ -57,23 +57,25 @@ class AuthService
 
     public function login(array $data): array
     {
-        $loginField = is_numeric($data['mobile_number']) ? 'mobile_number' : 'username';
 
-        $user = User::where('mobile_number', $data['mobile_number'])->first();
+
+        $loginField = is_numeric($data['login']) ? 'mobile_number' : 'username';
+
+        $user = User::where($loginField, $data['login'])->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
-            throw new Exception('Invalid mobile number or password.', 401);
+            throw new \Exception('Invalid credentials.', 401);
         }
 
         if (!$user->is_verified) {
-            throw new Exception('Account not verified. Please verify your account.', 403);
+            throw new \Exception('Account not verified. Please verify your OTP.', 403);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $token = $user->createToken('auth_token_for_'  . $user->username)->plainTextToken;
 
         return [
-            'access_token' => $token,
-            'token_type' => 'Bearer',
+            'user' => $user,
+            'token' => $token
         ];
     }
 }
