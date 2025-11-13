@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class Poll extends Model
 {
@@ -20,7 +21,7 @@ class Poll extends Model
         'status',
     ];
 
-    protected $dates = [
+    protected $casts = [
         'start_time' => 'datetime',
         'end_time' => 'datetime',
     ];
@@ -39,4 +40,14 @@ class Poll extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    // public function setStartTimeAttribute($value)
+    // {
+    //     $this->attributes['start_time'] = Carbon::createFromFormat('Y/m/d/H:i', $value)->toDateTimeString();
+    // }
+
+    // public function setEndTimeAttribute($value)
+    // {
+    //     $this->attributes['end_time'] = Carbon::createFromFormat('Y/m/d/H:i', $value)->toDateTimeString();
+    // }
 }

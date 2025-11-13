@@ -64,11 +64,11 @@ class AuthService
         $user = User::where($loginField, $data['login'])->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
-            throw new \Exception('Invalid credentials.', 401);
+            throw new Exception('Invalid credentials.', 401);
         }
 
         if (!$user->is_verified) {
-            throw new \Exception('Account not verified. Please verify your OTP.', 403);
+            throw new Exception('Account not verified. Please verify your OTP.', 403);
         }
 
         $token = $user->createToken('auth_token_for_'  . $user->username)->plainTextToken;

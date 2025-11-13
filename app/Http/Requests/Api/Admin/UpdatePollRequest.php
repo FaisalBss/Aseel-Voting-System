@@ -4,7 +4,7 @@ namespace App\Http\Requests\Api\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorePollRequest extends FormRequest
+class UpdatePollRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,16 +21,14 @@ class StorePollRequest extends FormRequest
      */
     public function rules(): array
     {
-
         $dateTimeFormat = 'Y/m/d/H:i';
+        $allowedStatuses = ['draft', 'scheduled'];
         return [
-            'title' => 'required|string|max:500',
-            'description' => 'nullable|string|max:3000',
-            'start_time' => 'required|date_format:' . $dateTimeFormat . '|after_or_equal:now',
-            'end_time' => 'required|date_format:'. $dateTimeFormat . '|after:start_time',
-            'status' => 'string|in:draft,active,closed',
-            'options' => 'required|array|min:2',
-            'options.*' => 'required|string|max:255',
+            'title' => 'sometimes|required|string|max:500',
+            'description' => 'sometimes|nullable|string|max:3000',
+            'start_time' => ['sometimes', 'required', 'date_format:' . $dateTimeFormat],
+            'end_time' => ['sometimes', 'required', 'date_format:' . $dateTimeFormat, 'after:start_time'],
+            'status' => ['sometimes', 'required', 'string', 'in:' . implode(',', $allowedStatuses)],
         ];
     }
 }

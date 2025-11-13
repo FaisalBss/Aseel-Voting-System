@@ -3,7 +3,7 @@
 namespace App\Traits;
 
 use Illuminate\Http\JsonResponse;
-
+use Exception;
 trait ApiResponseTrait
 {
 
@@ -28,5 +28,12 @@ trait ApiResponseTrait
         }
 
         return response()->json($response, $statusCode);
+    }
+
+
+    public function handleException(Exception $e, int $defaultStatusCode = 500): JsonResponse
+    {
+        $statusCode = $e->getCode() ?: $defaultStatusCode;
+        return $this->errorResponse($e->getMessage(), $statusCode);
     }
 }
