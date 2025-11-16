@@ -3,7 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\Admin\PollController;
+use App\Http\Controllers\Api\Admin\AdminPollController;
 use App\Http\Controllers\Api\userPollController;
 
 /*
@@ -22,9 +22,10 @@ Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    Route::post('/polls', [PollController::class, 'store']);
-    Route::put('/polls/{pollId}', [PollController::class, 'update']);
-    Route::delete('/polls/{pollId}', [PollController::class, 'destroy']);
+    Route::post('/polls', [AdminPollController::class, 'store']);
+    Route::put('/polls/{poll}', [AdminPollController::class, 'update']);
+    Route::get('/polls/{poll}/results', [AdminPollController::class, 'showResult']);
+    Route::delete('/polls/{poll}', [AdminPollController::class, 'destroy']);
 
 });
 
@@ -34,8 +35,9 @@ Route::middleware('auth:sanctum')->group(function () {
          return $request->user();
         });
 
-    Route::get('/polls', [PollController::class, 'index']);
-    Route::get('/logout', [AuthController::class, 'logout']);
+    Route::get('/polls', [userPollController::class, 'getActivePolls']);
     Route::post('/polls/{poll}/vote', [userPollController::class, 'vote']);
+    Route::get('/polls/{poll}/results', [userPollController::class, 'showResult']);
+    Route::get('/logout', [AuthController::class, 'logout']);
 });
 

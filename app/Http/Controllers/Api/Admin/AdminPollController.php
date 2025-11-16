@@ -11,8 +11,9 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\Api\Admin\UpdatePollRequest;
 use App\Models\Poll;
+use Illuminate\Http\Request;
 
-class PollController extends Controller
+class AdminPollController extends Controller
 {
     use ApiResponseTrait;
 
@@ -36,7 +37,7 @@ class PollController extends Controller
         }
     }
 
-    public function update(UpdatePollRequest $request, $poll): JsonResponse
+    public function update(UpdatePollRequest $request, Poll $poll): JsonResponse
     {
         try {
             $updatePoll = $this->pollService->updatePoll($poll, $request->validated());
@@ -61,13 +62,16 @@ class PollController extends Controller
         }
     }
 
-    public function index(): JsonResponse
+    public function showResult(Request $request, Poll $poll): JsonResponse
     {
         try {
-            $polls = $this->pollService->getAllPolls();
-            return PollResource::collection($polls)->response();
+            $results = $this->pollService->getPollResult($poll, $request->user());
+
+            return $this->successResponse($results, 'Poll results retrieved successfully.');
+
         } catch (Exception $e) {
             return $this->handleException($e, 500);
         }
     }
 }
+

@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PollResource;
 use App\Services\PollService;
 use App\Traits\ApiResponseTrait;
+use App\Http\Requests\Api\VoteRequest;
+use App\Models\Poll;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class userPollController extends Controller
@@ -20,27 +23,36 @@ class userPollController extends Controller
         $this->pollService = $pollService;
     }
 
-    public function index(): JsonResponse
+    public function vote(VoteRequest $request, Poll $poll): JsonResponse
     {
         try {
-            $polls = $this->pollService->getActivePolls();
+            $vote = $this->pollService->submitVote($poll, $request->validated(), $request->user());
+            $messege = $vote-> wasRecentlyCreated ? 'Vote submitted successfully.' : 'Vote updated successfully.';
+            $statusCode = $vote-> wasRecentlyCreated ? 201 : 200;
+            return $this->successResponse(null, $messege , $statusCode);
+        } catch (Exception $e) {
+            return $this->handleException($e, 400);
+        }
+    }
 
+    public function getActivePolls(): JsonResponse
+    {
+        try {
+            $polls = $this->pollService->getAllPolls();
             return PollResource::collection($polls)->response();
-
         } catch (Exception $e) {
             return $this->handleException($e, 500);
         }
     }
 
-    public function vote($poll, $voteRequest): JsonResponse
+    public function showResult(Request $request, Poll $poll): JsonResponse
     {
         try {
-            $vote = $this->pollService->castVote($poll, $voteRequest);
-
-            return $this->successResponse($vote, 'Vote cast successfully.', 200);
-
+            $result = $this->pollService->getPollResult($poll, $request->user());
+            return $this->successResponse($result, 'Poll results retrieved successfully.', 200);
         } catch (Exception $e) {
-            return $this->handleException($e, 500);
+            return $this->handleException($e, 400);
         }
     }
+
 }
