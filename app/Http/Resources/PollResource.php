@@ -20,13 +20,13 @@ class PollResource extends JsonResource
             'description' => $this->description,
             'status'=>$this->status,
 
-            'start_time' => $this->start_time,
-            'end_time' => $this->end_time,
+            // 'start_time' => $this->start_time,
+            // 'end_time' => $this->end_time,
 
-            'voter_count' => $this->voter_count,
+            // 'voter_count' => $this->voter_count,
 
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            // 'created_at' => $this->created_at,
+            // 'updated_at' => $this->updated_at,
             'options' => PollOptionResource::collection($this->options),
         ];
     }

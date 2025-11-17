@@ -38,8 +38,8 @@ class userPollController extends Controller
     public function getActivePolls(): JsonResponse
     {
         try {
-            $polls = $this->pollService->getAllPolls();
-            return PollResource::collection($polls)->response();
+            $polls = $this->pollService->getActivePolls();
+            return $this->successResponse(PollResource::collection($polls));
         } catch (Exception $e) {
             return $this->handleException($e, 500);
         }

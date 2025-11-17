@@ -82,9 +82,7 @@ class PollService
 
     public function getActivePolls()
     {
-        $now = Carbon::now();
-
-        return Poll::where('status', 'active')->with('options')->latest()->paginate(10);
+        return Poll::where('status', 'active')->with('options')->latest()->get();
     }
 
     public function submitVote(Poll $poll, array $data, User $user): UserVote
