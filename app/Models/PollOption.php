@@ -22,7 +22,7 @@ class PollOption extends Model
     }
     public function votes(): HasMany
     {
-        return $this->hasMany(UserVote::class);
+        return $this->hasMany(UserVote::class, 'poll_option_id');
     }
 
 }

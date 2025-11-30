@@ -3,6 +3,8 @@
 namespace App\Http\Requests\Api\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use App\Enums\PollStatus;
 
 class UpdatePollRequest extends FormRequest
 {
@@ -22,13 +24,13 @@ class UpdatePollRequest extends FormRequest
     public function rules(): array
     {
         $dateTimeFormat = 'Y/m/d/H:i';
-        $allowedStatuses = ['draft', 'scheduled'];
+        // $allowedStatuses = ['draft', 'scheduled', 'active'];
         return [
             'title' => 'sometimes|required|string|max:500',
             'description' => 'sometimes|nullable|string|max:3000',
             'start_time' => ['sometimes', 'required', 'date_format:' . $dateTimeFormat],
             'end_time' => ['sometimes', 'required', 'date_format:' . $dateTimeFormat, 'after:start_time'],
-            'status' => ['sometimes', 'required', 'string', 'in:' . implode(',', $allowedStatuses)],
+            'status' => ['sometimes', 'required', Rule::enum(PollStatus::class)->except([PollStatus::Closed])],
         ];
     }
 }

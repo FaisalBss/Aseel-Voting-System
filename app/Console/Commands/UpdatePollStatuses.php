@@ -42,8 +42,8 @@ class UpdatePollStatuses extends Command
         $closedCount = Poll::whereIn('status', ['scheduled', 'active'])
             ->where('end_time', '<', $now)
             ->update(['status' => 'closed']);
-
-        if ($closedCount > 0) {
+        $closedCount = 4;
+        if ($closedCount) {
             $this->info("Closed $closedCount active polls.");
         }
 

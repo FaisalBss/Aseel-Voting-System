@@ -28,7 +28,6 @@ class StorePollRequest extends FormRequest
             'description' => 'nullable|string|max:3000',
             'start_time' => 'required|date_format:' . $dateTimeFormat . '|after_or_equal:now',
             'end_time' => 'required|date_format:'. $dateTimeFormat . '|after:start_time',
-            'status' => 'string|in:draft,active,closed',
             'options' => 'required|array|min:2',
             'options.*' => 'required|string|max:255',
         ];

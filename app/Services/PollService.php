@@ -8,15 +8,18 @@ use App\Models\UserVote;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Enums\PollStatus;
 use Carbon\Carbon;
 use Exception;
+
+use function Symfony\Component\String\u;
 
 class PollService
 {
 
     private function validatePollModifiable(Poll $poll)
     {
-        if ($poll->start_time->isPast() && $poll->status !== 'scheduled' && $poll->status !== 'draft') {
+        if ($poll->status == PollStatus::Active) {
             throw new Exception('Cannot modify a poll that has already started.', 403);
         }
     }
@@ -47,7 +50,7 @@ class PollService
                 'start_time' => $data['start_time'],
                 'end_time' => $data['end_time'],
                 'created_by' => Auth::id(),
-                'status' => $data['status'] ?? 'draft' ?? 'scheduled',
+                'status' => PollStatus::Draft,
             ]);
 
             $uniqueOptions = array_unique($data['options']);
@@ -76,13 +79,10 @@ class PollService
 
     }
 
-    public function getAllPolls() {
-        return Poll::where('created_by', Auth::id())->with('options')->latest()->paginate(10);
-    }
 
     public function getActivePolls()
     {
-        return Poll::where('status', 'active')->with('options')->latest()->get();
+        return Poll::where('status', PollStatus::Active)->with('options')->latest()->get();
     }
 
     public function submitVote(Poll $poll, array $data, User $user): UserVote
@@ -91,23 +91,24 @@ class PollService
             throw new Exception('Only verified users can vote.', 403);
         }
 
-        if ($poll->status !== 'active' || $poll->end_time->isPast()) {
+        if ($poll->status !== PollStatus::Active || $poll->end_time->isPast()) {
             throw new Exception('Poll is not active or has expired.', 400);
         }
 
         $newOptionId = $data['poll_option_id'];
 
-        return DB::transaction(function () use ($poll, $newOptionId, $user) {
+        $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
 
-            $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
-
-            if($existingVote){
-
-                if($existingVote->poll_option_id == $newOptionId){
+        if($existingVote && $existingVote->poll_option_id == $newOptionId){
                     throw new Exception('You have already voted for this option.', 409);
                 }
 
-                PollOption::where('id', $existingVote->poll_option_id)->decrement('vote_count');
+        return DB::transaction(function () use ($poll, $newOptionId, $user, $existingVote) {
+
+            // $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
+
+            if($existingVote){
+                // PollOption::where('id', $existingVote->poll_option_id)->decrement('vote_count') && $existingVote->update(['poll_option_id' => $newOptionId]);
                 $existingVote->update(['poll_option_id' => $newOptionId]);
                 $vote = $existingVote;
 
@@ -118,48 +119,17 @@ class PollService
                 'poll_option_id' => $newOptionId,
             ]);
                 }
-            PollOption::where('id', $newOptionId)->increment('vote_count');
+            // PollOption::where('id', $newOptionId)->increment('vote_count');
 
             return $vote;
         });
-    }
-
-    public function getAllResult(Poll $poll, User $user) {
-        $hasVoted = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->exists();
-
-        if($user->role != 1 && !$hasVoted && $poll->status !== 'closed') {
-            throw new Exception('Results are not available until you vote or the poll is closed.', 403);
-        }
-
-        $options = $poll->options;
-
-        $totalVotes = $options->sum('vote_count');
-
-        $formattedOptions = $options->map(function ($option) use ($totalVotes) {
-
-            $count = $option->vote_count;
-            $percentage = ($totalVotes > 0) ? round(($count / $totalVotes) * 100, 2) : 0;
-
-            return [
-                'id' => $option->id,
-                'option_text' => $option->option_text,
-                'vote_count' => $count,
-                'percentage' => $percentage
-            ];
-        });
-
-        return [
-            'poll_title' => $poll->title,
-            'total_votes' => $totalVotes,
-            'options' => $formattedOptions
-        ];
     }
 
     public function getPollResult(Poll $poll, User $user) {
 
         $hasVoted = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->exists();
 
-        if($user->role != 1 && !$hasVoted && $poll->status !== 'closed') {
+        if($user->role != 1 && !$hasVoted && $poll->status !== PollStatus::Closed) {
             throw new Exception('Results are not available until you vote or the poll is closed.', 403);
         }
 
@@ -185,3 +155,4 @@ class PollService
         ];
     }
 }
+
