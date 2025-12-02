@@ -26,10 +26,16 @@ class userPollController extends Controller
     public function vote(VoteRequest $request, Poll $poll): JsonResponse
     {
         try {
-            $vote = $this->pollService->submitVote($poll, $request->validated(), $request->user());
-            $messege = $vote-> wasRecentlyCreated ? 'Vote submitted successfully.' : 'Vote updated successfully.';
-            $statusCode = $vote-> wasRecentlyCreated ? 201 : 200;
-            return $this->successResponse(null, $messege , $statusCode);
+            $wasNew = $this->pollService->submitVote(
+                $request->user()->id,
+                $poll,
+                $request->validated()['poll_option_id']
+            );
+
+            $message = $wasNew ? 'Vote submitted successfully.' : 'Vote updated successfully.';
+            $statusCode = $wasNew ? 201 : 200;
+
+            return $this->successResponse(null, $message, $statusCode);
         } catch (Exception $e) {
             return $this->handleException($e, 400);
         }
@@ -37,12 +43,12 @@ class userPollController extends Controller
 
     public function getActivePolls(): JsonResponse
     {
-        try {
+       try {
             $polls = $this->pollService->getActivePolls();
             return $this->successResponse(PollResource::collection($polls));
         } catch (Exception $e) {
             return $this->handleException($e, 500);
-        }
+       }
     }
 
     public function showResult(Request $request, Poll $poll): JsonResponse

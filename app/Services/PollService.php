@@ -85,45 +85,109 @@ class PollService
         return Poll::where('status', PollStatus::Active)->with('options')->latest()->get();
     }
 
-    public function submitVote(Poll $poll, array $data, User $user): UserVote
+
+    public function refreshVoteCounts(Poll $poll): void
     {
-        if (!$user->is_verified) {
-            throw new Exception('Only verified users can vote.', 403);
+        $voteCounts = DB::table('user_votes')
+            ->where('poll_id', $poll->id)
+            ->select('poll_option_id', DB::raw('COUNT(*) as count'))
+            ->groupBy('poll_option_id')
+            ->pluck('count', 'poll_option_id');
+
+        if ($voteCounts->isEmpty()) {
+            DB::table('poll_options')
+                ->where('poll_id', $poll->id)
+                ->update(['vote_count' => 0]);
+            return;
         }
 
-        if ($poll->status !== PollStatus::Active || $poll->end_time->isPast()) {
-            throw new Exception('Poll is not active or has expired.', 400);
+        $cases = [];
+        $ids = [];
+
+        foreach ($voteCounts as $optionId => $count) {
+            $cases[] = "WHEN {$optionId} THEN {$count}";
+            $ids[] = $optionId;
         }
 
-        $newOptionId = $data['poll_option_id'];
+        $casesString = implode(' ', $cases);
+        $idsString = implode(',', $ids);
 
-        $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
-
-        if($existingVote && $existingVote->poll_option_id == $newOptionId){
-                    throw new Exception('You have already voted for this option.', 409);
-                }
-
-        return DB::transaction(function () use ($poll, $newOptionId, $user, $existingVote) {
-
-            // $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
-
-            if($existingVote){
-                // PollOption::where('id', $existingVote->poll_option_id)->decrement('vote_count') && $existingVote->update(['poll_option_id' => $newOptionId]);
-                $existingVote->update(['poll_option_id' => $newOptionId]);
-                $vote = $existingVote;
-
-            }else{
-               $vote = UserVote::create([
-                'user_id' => $user->id,
-                'poll_id' => $poll->id,
-                'poll_option_id' => $newOptionId,
-            ]);
-                }
-            // PollOption::where('id', $newOptionId)->increment('vote_count');
-
-            return $vote;
-        });
+        DB::update("
+            UPDATE poll_options
+            SET vote_count = CASE
+                WHEN id IN ({$idsString}) THEN CASE id {$casesString} END
+                ELSE 0
+            END
+            WHERE poll_id = ?
+        ", [$poll->id]);
     }
+
+    public function submitVote(int $userId, Poll $poll, int $pollOptionId): bool
+    {
+        $wasRecentlyCreated = false;
+
+        DB::transaction(function () use ($userId, $poll, $pollOptionId, & $wasRecentlyCreated) {
+        $existingVote = UserVote::where('user_id', $userId)
+            ->where('poll_id', $poll->id)
+            ->first();
+
+        $wasRecentlyCreated = !$existingVote;
+
+        if ($existingVote) {
+            $existingVote->update(['poll_option_id' => $pollOptionId]);
+        } else {
+            UserVote::create([
+                'user_id' => $userId,
+                'poll_id' => $poll->id,
+                'poll_option_id' => $pollOptionId,
+            ]);
+        }
+
+        $this->refreshVoteCounts($poll);
+    });
+
+    return $wasRecentlyCreated;
+    }
+
+    // public function submitVote(Poll $poll, array $data, User $user): UserVote
+    // {
+    //     if (!$user->is_verified) {
+    //         throw new Exception('Only verified users can vote.', 403);
+    //     }
+
+    //     if ($poll->status !== PollStatus::Active || $poll->end_time->isPast()) {
+    //         throw new Exception('Poll is not active or has expired.', 400);
+    //     }
+
+    //     $newOptionId = $data['poll_option_id'];
+
+    //     $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
+
+    //     if($existingVote && $existingVote->poll_option_id == $newOptionId){
+    //                 throw new Exception('You have already voted for this option.', 409);
+    //             }
+
+    //     return DB::transaction(function () use ($poll, $newOptionId, $user, $existingVote) {
+
+    //         // $existingVote = UserVote::where('user_id', $user->id)->where('poll_id', $poll->id)->first();
+
+    //         if($existingVote){
+    //             // PollOption::where('id', $existingVote->poll_option_id)->decrement('vote_count') && $existingVote->update(['poll_option_id' => $newOptionId]);
+    //             $existingVote->update(['poll_option_id' => $newOptionId]);
+    //             $vote = $existingVote;
+
+    //         }else{
+    //            $vote = UserVote::create([
+    //             'user_id' => $user->id,
+    //             'poll_id' => $poll->id,
+    //             'poll_option_id' => $newOptionId,
+    //         ]);
+    //             }
+    //         // PollOption::where('id', $newOptionId)->increment('vote_count');
+
+    //         return $vote;
+    //     });
+    // }
 
     public function getPollResult(Poll $poll, User $user) {
 
